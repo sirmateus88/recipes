@@ -3,7 +3,7 @@ const {
   db,
   Recipie,
   User,
-} = require("../server/db/models/index");
+} = require("./server/db/models/index");
 
 const recipies = [
   {

@@ -7,3 +7,12 @@ router.get('/', (req, res, next) => {
     .then(recipies => res.json(recipies))
     .catch(next)
 })
+
+router.post('/', (req, res, next) => {
+  Recipie.create(req.body)
+  .then(created => res.json(created))
+  .catch(err => {
+    console.error(err);
+    res.status(400).json(err)
+  })
+})

@@ -3,11 +3,11 @@ const axios = require('axios');
 const Nightmare = require('nightmare');
 const nightmare = Nightmare();
 
-
 router.get('/', (req, res, next) => {
   console.log('request query: ', req.query)
   axios({
     method: 'get',
+    'Content-Type': 'application/json',
     url: `https://mercury.postlight.com/parser?url=${req.query.url}}`,
     headers: {'x-api-key': process.env.MERCURY_API_KEY}
   })
@@ -23,20 +23,19 @@ router.get('/', (req, res, next) => {
       }
     })
     .then(processed => res.json(processed))
-    .catch(err => res.json(err))
+    .catch(err => {
+      res.send("There was a problem connecting to the server")
+      console.error(err)});
 })
 
 router.get('/recipie', (req, res, next) => {
   console.log('request query: ', req.query)
   nightmare.goto(req.query.url)
-  .wait(".recipe-directions")
   .evaluate(() => {
-      console.log('evaluating....');
-      let found = [...document.querySelectorAll(".recipe-directions")]
-      console.log('found', found);
+      let found = [...document.querySelectorAll('jetpack-recipe-directions')]
       return found;
     })
-    //.then(goTo => console.log('goTo completed, here is the data: ', goTo))
+    .then(goTo => console.log('goTo completed, here is the data: ', goTo))
     //.evaluate(() => console.log(document))
     .end()
     //.then(found => console.log('found from nightmare:', found))

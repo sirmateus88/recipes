@@ -14,6 +14,9 @@ const db = require('../db.js');
  * for example, we can say: const {User} = require('../db/models')
  * instead of: const User = require('../db/models/user')
  */
+
+Recipie.belongsTo(User, {as: 'Author'});
+
 module.exports = {
   User,
   Recipie,

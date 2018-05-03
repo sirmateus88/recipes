@@ -11,6 +11,9 @@ const Recipie = db.define('recipie', {
   },
   recipie: {
     type: Sequelize.ARRAY(Sequelize.TEXT),
+  },
+  isPrivate: {
+    type: Sequelize.BOOLEAN
   }
 })
 

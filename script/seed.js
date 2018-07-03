@@ -29,7 +29,9 @@ const recipies = [
     , "Sprinkle baking powder, baking soda, salt, cinanmon, nutmeg, ginger and cloves over batter and whisk until well-combined.", "Add flour and stir with a spoon, just until mixed.", "Scrape into prepared pan and smooth the top.", "In a small dish, or empty measuring cup, stir sugar and cinnamon together. Sprinkle over top of batter.",
     "Bake bread for 65 to 75 minutes until a tester poked into all parts of cake (both the top and center will want to hide pockets of uncooked batter) come out batter-free, turning the cake once during the baking time for even coloring.",
     "You can cool it in the pan for 10 minutes and then remove it, or cool it completely in there. The latter provides the advantage of letting more of the loose cinnamon sugar on top adhere before being knocked off.",
-    "Cake keeps at room temperature as long as you can hide it. I like to keep mine in the tin with a piece of foil or plastic just over the cut end and the top exposed to best keep the lid crisp as long as possible."]
+    "Cake keeps at room temperature as long as you can hide it. I like to keep mine in the tin with a piece of foil or plastic just over the cut end and the top exposed to best keep the lid crisp as long as possible."],
+    isPrivate: false,
+    AuthorId: 1
   }
 ];
 
@@ -52,120 +54,12 @@ const users = [
     creditCard: 123456781,
     hasPassword: true,
     googleId: "321"
-  },
-  {
-    email: "GeorgeCastanza@gmail.com",
-    password: "123",
-    firstName: "George",
-    lastName: "Castanza",
-    creditCard: 123456782,
-    hasPassword: true,
-    googleId: "321"
-  },
-  {
-    email: "goodJokes@gmail.com",
-    password: "123",
-    firstName: "Jerry",
-    lastName: "Seinfeld",
-    creditCard: 123456783,
-    hasPassword: true,
-    googleId: "321"
-  },
-  {
-    email: "tCruise@gmail.com",
-    password: "123",
-    firstName: "Tom",
-    lastName: "Cruise",
-    creditCard: 123456784,
-    hasPassword: true,
-    googleId: "321"
-  },
-  {
-    email: "abc123@gmail.com",
-    password: "123",
-    firstName: "Michael",
-    lastName: "Jackson",
-    creditCard: 123456785,
-    hasPassword: true,
-    googleId: "321"
-  },
-  {
-    email: "Kobe@gmail.com",
-    password: "123",
-    firstName: "Kobe",
-    lastName: "Bryant",
-    creditCard: 123456786,
-    hasPassword: true,
-    googleId: "321"
-  },
-  {
-    email: "lGags@gmail.com",
-    password: "123",
-    firstName: "Lady",
-    lastName: "Gaga",
-    creditCard: 123456787,
-    hasPassword: true,
-    googleId: "321"
-  },
-  {
-    email: "bono@gmail.com",
-    password: "123",
-    firstName: "Bono",
-    lastName: "...",
-    creditCard: 123456788,
-    hasPassword: true,
-    googleId: "321"
-  },
-  {
-    email: "dGrohl@gmail.com",
-    password: "123",
-    firstName: "Dave",
-    lastName: "Grohl",
-    creditCard: 223456789,
-    hasPassword: true,
-    googleId: "321"
-  },
-  {
-    email: "kCobain@gmail.com",
-    password: "123",
-    firstName: "Kurt",
-    lastName: "Cobain",
-    creditCard: 323456789,
-    hasPassword: true,
-    googleId: "321"
-  },
-  {
-    email: "jHendrix@gmail.com",
-    password: "123",
-    firstName: "Jimi",
-    lastName: "Hendrix",
-    creditCard: 423456789,
-    hasPassword: true,
-    googleId: "321"
-  },
-  {
-    email: "runninDownADream@gmail.com",
-    password: "123",
-    firstName: "Tom",
-    lastName: "Petty",
-    creditCard: 523456789,
-    hasPassword: true,
-    googleId: "321"
-  },
-  {
-    email: "folk4lyfe@gmail.com",
-    password: "123",
-    firstName: "Bob",
-    lastName: "Dylan",
-    creditCard: 623456789,
-    hasPassword: true,
-    googleId: "321"
   }
 ];
 
 const seed = () =>
-  Promise.all(recipies.map(recipie => Recipie.create(recipie)))
-    .then(() => Promise.all(users.map(user => User.create(user))))
+  Promise.all(users.map(user => User.create(user)))
+    .then(() => Promise.all(recipies.map(recipie => Recipie.create(recipie))))
 
 // const addPerms = () =>
 //   User.findAll({

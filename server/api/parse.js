@@ -1,49 +1,37 @@
 const router = require('express').Router()
 const axios = require('axios');
 const Nightmare = require('nightmare');
-const nightmare = Nightmare();
+const nightmare = Nightmare({executionTimeout: 10000});
 
-router.get('/', (req, res, next) => {
-  console.log('request query: ', req.query)
-  axios({
-    method: 'get',
-    'Content-Type': 'application/json',
-    url: `https://mercury.postlight.com/parser?url=${req.query.url}}`,
-    headers: {'x-api-key': process.env.MERCURY_API_KEY}
+const findIngredients = body => {
+  let everything = body;
+  //let end = [...everything];
+  console.log(everything)
+  return everything;
+}
+
+router.get('/recipe', (req, res, next) => {
+  console.log('request query: ', req.query.url)
+  let p1 = 1
+  let p2 = 3
+  nightmare
+  .goto(req.query.url)
+  .evaluate(p1 => {
+    return {
+      key: document.body
+    }
+  }, p1) // <-- that's how you pass parameters from Node scope to browser scope
+ //end evaluate
+  .then(body => {
+    console.log('panic')
+    findIngredients(body)
   })
-    .then(found => {
-      console.log('found: ', found.data)
-      let title = found.data.title
-      let ingredients = findInredients(found.data.content)
-      let recipie = findRecipie(found.data.content)
-      return {
-        title,
-        ingredients,
-        recipie
-      }
-    })
-    .then(processed => res.json(processed))
-    .catch(err => {
-      res.send("There was a problem connecting to the server")
-      console.error(err)});
-})
-
-router.get('/recipie', (req, res, next) => {
-  console.log('request query: ', req.query)
-  nightmare.goto(req.query.url)
-  .evaluate(() => {
-      let found = [...document.querySelectorAll('jetpack-recipe-directions')]
-      return found;
-    })
-    .then(goTo => console.log('goTo completed, here is the data: ', goTo))
-    //.evaluate(() => console.log(document))
-    .end()
-    //.then(found => console.log('found from nightmare:', found))
-    .then(processed => {
-      console.log('suscess')
-      res.send(processed)
-    })
-    .catch(err => res.json(err))
+  .then(result => {
+    res.send(result);
+  })
+  .catch(err => {
+    res.send("Help something went wrong out heah")
+    console.error(err)});
 })
 
 // router.get('/', (req, res, next) => {
@@ -73,16 +61,18 @@ const pullItem = ingredient => {
   return trimmed;
 }
 
-const findInredients = content => {
-  let ingredientPos = content.search('ingredient')
-  let trimmedIngredients = content.slice(ingredientPos);
-  let startOfList = trimmedIngredients.search('<ul');
-  let potentialIngredients = trimmedIngredients.slice(startOfList + 4)
-  let endOfList = potentialIngredients.search('</ul>')
-  potentialIngredients = potentialIngredients.slice(0, endOfList);
-  let ingreArr = potentialIngredients.split('</li>');
-  return ingreArr.map(ingredient => pullItem(ingredient)).filter(item => item !== '');
-}
+// const findInredients = content => {
+//   let ingredientPos = content.search('ingredient')
+//   let trimmedIngredients = content.slice(ingredientPos);
+//   let startOfList = trimmedIngredients.search('<ul');
+//   let potentialIngredients = trimmedIngredients.slice(startOfList + 4)
+//   let endOfList = potentialIngredients.search('</ul>')
+//   potentialIngredients = potentialIngredients.slice(0, endOfList);
+//   let ingreArr = potentialIngredients.split('</li>');
+//   return ingreArr.map(ingredient => pullItem(ingredient)).filter(item => item !== '');
+// }
+
+
 
 const findRecipie = content => {
   let recipiePos = content.search('jetpack-recipe-directions')
@@ -94,3 +84,29 @@ const findRecipie = content => {
   let recipieArr = potentialRecipie.split('</p>');
   return recipieArr.map(recipe => pullItem(recipe)).filter(item => item !== '');
 }
+
+
+// router.get('/', (req, res, next) => {
+//   console.log('request query: ', req.query.url)
+//   axios({
+//     method: 'get',
+//     'Content-Type': 'application/json',
+//     url: `https://mercury.postlight.com/parser?url=${req.query.url}}`,
+//     headers: {'x-api-key': process.env.MERCURY_API_KEY}
+//   })
+//     .then(found => {
+//       console.log('found: ', found.data)
+//       let title = found.data.title
+//       let ingredients = findInredients(found.data.content)
+//       let recipie = findRecipie(found.data.content)
+//       return {
+//         title,
+//         ingredients,
+//         recipie
+//       }
+//     })
+//     .then(processed => res.json(processed))
+//     .catch(err => {
+//       res.send("There was a problem connecting to the server")
+//       console.error(err)});
+// })

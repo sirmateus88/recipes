@@ -2,6 +2,8 @@ const router = require('express').Router()
 const axios = require('axios');
 const Nightmare = require('nightmare');
 const nightmare = Nightmare({executionTimeout: 10000});
+const jsdom = require("jsdom");
+const { JSDOM } = jsdom;
 
 const findIngredients = body => {
   let everything = body;
@@ -12,27 +14,56 @@ const findIngredients = body => {
 
 router.get('/recipe', (req, res, next) => {
   console.log('request query: ', req.query.url)
-  let p1 = 1
-  let p2 = 3
-  nightmare
-  .goto(req.query.url)
-  .evaluate(p1 => {
-    return {
-      key: document.body
-    }
-  }, p1) // <-- that's how you pass parameters from Node scope to browser scope
- //end evaluate
-  .then(body => {
-    console.log('panic')
-    findIngredients(body)
-  })
-  .then(result => {
-    res.send(result);
+  // const dom = new JSDOM(``, {
+  //   url: req.query.url,
+  //   referrer: "https://example.com/",
+  //   contentType: "text/html",
+  //   includeNodeLocations: true,
+  //   storageQuota: 10000000,
+  //   runScripts: 'outside-only'
+  // })
+
+  axios.get(req.query.url)
+  .then(response => response.data)
+  .then(data => new JSDOM(data, {runScripts: 'outside-only'}))
+  .then(test => {
+    //console.log('response', response);
+    console.log('in axios', test)
+    console.log('what is the data', typeof test);
+    res.send(test.window.document.querySelectorAll('p')[0]);
   })
   .catch(err => {
-    res.send("Help something went wrong out heah")
-    console.error(err)});
+    res.status(500).send(err)
+  })
+
+  // let foundDoc = dom.window.document.querySelectorAll('p');
+  // console.log('dom made brah', foundDoc);
+  // res.send(foundDoc);
 })
+
+// router.get('/recipe', (req, res, next) => {
+//   console.log('request query: ', req.query.url)
+//   let p1 = 1
+//   let p2 = 3
+//   nightmare
+//   .goto(req.query.url)
+//   .evaluate(p1 => {
+//     return {
+//       key: document.body
+//     }
+//   }, p1) // <-- that's how you pass parameters from Node scope to browser scope
+//  //end evaluate
+//   .then(body => {
+//     console.log('panic')
+//     findIngredients(body)
+//   })
+//   .then(result => {
+//     res.send(result);
+//   })
+//   .catch(err => {
+//     res.send("Help something went wrong out heah")
+//     console.error(err)});
+// })
 
 // router.get('/', (req, res, next) => {
 //   axios.get(`https://smittenkitchen.com/2016/10/pumpkin-bread/`)

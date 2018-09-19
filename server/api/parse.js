@@ -4,6 +4,16 @@ const Nightmare = require('nightmare');
 const nightmare = Nightmare({executionTimeout: 10000});
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
+const htmlparser = require('htmlparser');
+
+const handler = new htmlparser.DefaultHandler(function (error, dom) {
+  if (error)
+      console.log('there was a problem, ', error);
+  else
+      console.log('parse complete bro!');
+});
+
+const parser = new htmlparser.Parser(handler);
 
 const findIngredients = body => {
   let everything = body;
@@ -25,12 +35,12 @@ router.get('/recipe', (req, res, next) => {
 
   axios.get(req.query.url)
   .then(response => response.data)
-  .then(data => new JSDOM(data, {runScripts: 'outside-only'}))
+  .then(data => parser.parseComplete(data))
   .then(test => {
     //console.log('response', response);
     console.log('in axios', test)
     console.log('what is the data', typeof test);
-    res.send(test.window.document.querySelectorAll('p')[0]);
+    res.send(test);
   })
   .catch(err => {
     res.status(500).send(err)

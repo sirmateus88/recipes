@@ -15,29 +15,32 @@ const handler = new htmlparser.DefaultHandler(function (error, dom) {
 
 const parser = new htmlparser.Parser(handler);
 
-const findIngredients = body => {
-  let everything = body;
-  //let end = [...everything];
-  console.log(everything)
-  return everything;
+const findIngredients = nodes => {
+  let currNode = {};
+  while(nodes.length){
+    currNode = nodes.pop();
+    if(currNode.data.contains('ingredient')){
+      //call function TBD
+      console.log('GOT IT', currNode)
+    }
+  }
+  return 'everything';
+}
+
+const getIngredientList = node => {
+  let currNode = node;
+  if (currNode.type === 'tag' && currNode.data === 'ul'){
+
+  }
 }
 
 router.get('/recipe', (req, res, next) => {
   console.log('request query: ', req.query.url)
-  // const dom = new JSDOM(``, {
-  //   url: req.query.url,
-  //   referrer: "https://example.com/",
-  //   contentType: "text/html",
-  //   includeNodeLocations: true,
-  //   storageQuota: 10000000,
-  //   runScripts: 'outside-only'
-  // })
 
   axios.get(req.query.url)
   .then(response => response.data)
   .then(data => parser.parseComplete(data))
   .then(test => {
-    //console.log('response', response);
     console.log('in axios', test)
     console.log('what is the data', typeof test);
     res.send(test);
@@ -46,9 +49,6 @@ router.get('/recipe', (req, res, next) => {
     res.status(500).send(err)
   })
 
-  // let foundDoc = dom.window.document.querySelectorAll('p');
-  // console.log('dom made brah', foundDoc);
-  // res.send(foundDoc);
 })
 
 // router.get('/recipe', (req, res, next) => {

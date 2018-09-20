@@ -17,33 +17,38 @@ const parser = new htmlparser.Parser(handler);
 
 const findIngredients = nodes => {
   let currNode = {};
-  while(nodes.length){
+  console.log('I\'m in it and I can\'t get out')
+  while (nodes.length){
     currNode = nodes.pop();
-    if(currNode.data.contains('ingredient')){
-      //call function TBD
+    console.log('the current node brah ', currNode);
+    if (currNode.data.contains('ingredient')){
       console.log('GOT IT', currNode)
     }
   }
-  return 'everything';
+  return currNode;
 }
 
 const getIngredientList = node => {
   let currNode = node;
   if (currNode.type === 'tag' && currNode.data === 'ul'){
-
+    console.log('found the tag');
   }
 }
 
 router.get('/recipe', (req, res, next) => {
-  console.log('request query: ', req.query.url)
+  //console.log('request query: ', req.query.url)
 
   axios.get(req.query.url)
   .then(response => response.data)
-  .then(data => parser.parseComplete(data))
-  .then(test => {
-    console.log('in axios', test)
-    console.log('what is the data', typeof test);
-    res.send(test);
+  .then(data => {
+    parser.parseComplete(data)
+    //console.log('yea parser', parser);
+    //console.log('yea handler', handler.dom);
+    return handler.dom
+  })
+  .then(parsedDom => {
+    let found = findIngredients(parsedDom)
+    res.send(parsedDom);
   })
   .catch(err => {
     res.status(500).send(err)

@@ -17,15 +17,35 @@ const parser = new htmlparser.Parser(handler);
 
 const findIngredients = nodes => {
   let currNode = {};
-  console.log('I\'m in it and I can\'t get out')
-  while (nodes.length){
-    currNode = nodes.pop();
-    console.log('the current node brah ', currNode);
-    if (currNode.data.contains('ingredient')){
-      console.log('GOT IT', currNode)
+  //console.log('I\'m in it and I can\'t get out', nodes)
+  for (let i = 0; i < nodes.length; i++){
+    let found = {};
+    try {
+      currNode = nodes[i]
+      console.log('\n\n\n\n\n\nthe current node brah ', currNode);
+
+      if (currNode.type === 'text'){
+        console.log('\n--------------\n currNode.data', currNode.data, 'currNode Type', currNode.type);
+        let whereIngredient = currNode.data.toLowerCase().indexOf('ingredient');
+        if (whereIngredient !== -1 && whereIngredient < 5){
+          console.log('GOT IT', currNode)
+          return currNode;
+        }
+      } else if (currNode.children) {
+        found = findIngredients(currNode.children)
+        if (Object.keys(found).length > 0){
+          console.log('in the else brah', Object.keys(found).length)
+          console.log('found', found)
+          return found;
+        }
+      }
+
+    } catch (err){
+      console.error(err);
     }
+
   }
-  return currNode;
+  return {};
 }
 
 const getIngredientList = node => {
@@ -48,6 +68,7 @@ router.get('/recipe', (req, res, next) => {
   })
   .then(parsedDom => {
     let found = findIngredients(parsedDom)
+    console.log('DID WE FIND IT????', found);
     res.send(parsedDom);
   })
   .catch(err => {

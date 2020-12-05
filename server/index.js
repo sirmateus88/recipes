@@ -99,9 +99,9 @@ const syncDb = () => db.sync()
 // if we wanted to require our app in a test spec
 if (require.main === module) {
   sessionStore.sync()
-    .then(syncDb)
-    .then(createApp)
-    .then(startListening)
+    .then(syncDb())
+    .then(createApp())
+    .then(startListening())
 } else {
   createApp()
 }

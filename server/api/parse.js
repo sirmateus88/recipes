@@ -24,5 +24,19 @@ router.get('/', (req, res, next) => {
 
 })
 
+router.get('/convert', (req, res, next) => {
+  console.log('request query: ', req.query.url)
+
+  getFromFoodAPI.get(`recipes/convert?ingredientName=${req.query.ingredientName}&sourceAmount=${req.query.sourceAmount}&sourceUnit=${req.query.sourceUnit}&targetUnit=${req.query.targetUnit}`)
+  .then(response => response.data)
+  .then(data => {
+    res.status(200).send(data)
+  })
+  .catch(err => {
+    res.status(500).send(err)
+  })
+
+})
+
 
 module.exports = router

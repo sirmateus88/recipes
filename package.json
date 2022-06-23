@@ -31,7 +31,7 @@
     "fetch": "^1.1.0",
     "history": "^4.6.3",
     "htmlparser": "^1.7.7",
-    "jsdom": "^12.0.0",
+    "jsdom": "^16.5.0",
     "morgan": "^1.8.1",
     "nightmare": "^3.0.0",
     "passport": "^0.3.2",

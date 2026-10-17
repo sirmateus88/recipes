@@ -1,6 +1,7 @@
 const router = require('express').Router()
 const axios = require('axios');
 const {parseLimiter} = require('../rateLimit')
+const {requireUser} = require('../auth/token')
 
 const getFromFoodAPI = axios.create({
   baseURL: 'https://api.spoonacular.com/'
@@ -20,6 +21,8 @@ const sendFoodAPIError = (res, err, message) => {
 }
 
 router.use(parseLimiter)
+// every route here spends Spoonacular quota, so all of them need a login (PRD-001 R18)
+router.use(requireUser)
 
 router.get('/', (req, res, next) => {
   console.log('request query: ', req.query.url)

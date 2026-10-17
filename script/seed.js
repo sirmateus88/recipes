@@ -1,3 +1,5 @@
+if (process.env.NODE_ENV !== "production") require("../secrets");
+
 const Sequelize = require("sequelize");
 const {
   db,
@@ -30,36 +32,20 @@ const recipies = [
     "Bake bread for 65 to 75 minutes until a tester poked into all parts of cake (both the top and center will want to hide pockets of uncooked batter) come out batter-free, turning the cake once during the baking time for even coloring.",
     "You can cool it in the pan for 10 minutes and then remove it, or cool it completely in there. The latter provides the advantage of letting more of the loose cinnamon sugar on top adhere before being knocked off.",
     "Cake keeps at room temperature as long as you can hide it. I like to keep mine in the tin with a piece of foil or plastic just over the cut end and the top exposed to best keep the lid crisp as long as possible."],
-    isPrivate: false,
-    AuthorId: 1
+    isPrivate: false
   }
 ];
 
-const users = [
-  {
-    email: "aweis@gmail.com",
-    password: "123",
-    firstName: "Alex",
-    lastName: "Weis",
-    creditCard: 123456789,
-    adminStatus: true,
-    hasPassword: true,
-    googleId: "321"
-  },
-  {
-    email: "newGuy@gmail.com",
-    password: "123",
-    firstName: "New",
-    lastName: "guy",
-    creditCard: 123456781,
-    hasPassword: true,
-    googleId: "321"
-  }
-];
+// One owner account from env vars; no test users with known passwords
+const owner = {
+  email: process.env.SEED_OWNER_EMAIL,
+  password: process.env.SEED_OWNER_PASSWORD
+};
 
 const seed = () =>
-  Promise.all(users.map(user => User.create(user)))
-    .then(() => Promise.all(recipies.map(recipie => Recipie.create(recipie))))
+  User.create(owner)
+    .then(createdOwner => Promise.all(recipies.map(recipie =>
+      Recipie.create(Object.assign({}, recipie, { AuthorId: createdOwner.id })))))
 
 // const addPerms = () =>
 //   User.findAll({
@@ -74,6 +60,10 @@ const seed = () =>
 //   .then(foundPerms => Promise.all(foundPerms.map(perm => user.addPermission(perm))));
 
 const main = () => {
+  if (!owner.email || !owner.password) {
+    console.log("Set SEED_OWNER_EMAIL and SEED_OWNER_PASSWORD to seed");
+    process.exit(1);
+  }
   console.log("Syncing db...");
   db
     .sync({ force: true })

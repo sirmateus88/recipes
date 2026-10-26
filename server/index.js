@@ -3,11 +3,8 @@ const express = require('express')
 const morgan = require('morgan')
 const bodyParser = require('body-parser')
 const compression = require('compression')
-const session = require('express-session')
 const passport = require('passport')
-const SequelizeStore = require('connect-session-sequelize')(session.Store)
 const db = require('./db')
-const sessionStore = new SequelizeStore({db})
 const PORT = process.env.PORT || 8081
 const app = express()
 const socketio = require('socket.io')
@@ -31,6 +28,12 @@ passport.deserializeUser((id, done) =>
     .catch(done))
 
 const createApp = () => {
+  // Railway sits behind a proxy; needed so rate limiting sees the client IP
+  app.set('trust proxy', 1)
+
+  // health check, before logging so uptime pings stay out of the logs
+  app.get('/health', (req, res) => res.sendStatus(200))
+
   // logging middleware
   app.use(morgan('dev'))
 
@@ -41,15 +44,8 @@ const createApp = () => {
   // compression middleware
   app.use(compression())
 
-  // session middleware with passport
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'my best friend is Cody',
-    store: sessionStore,
-    resave: false,
-    saveUninitialized: false
-  }))
+  // auth is bearer tokens (see auth/token.js), so no session middleware
   app.use(passport.initialize())
-  app.use(passport.session())
 
   // auth and api routes
   app.use('/auth', require('./auth'))
@@ -98,10 +94,20 @@ const syncDb = () => db.sync()
 // It will evaluate false when this module is required by another module - for example,
 // if we wanted to require our app in a test spec
 if (require.main === module) {
-  sessionStore.sync()
-    .then(syncDb())
-    .then(createApp())
-    .then(startListening())
+  const requiredEnv = ['DATABASE_URL', 'SPOONACULAR_API_KEY', 'JWT_SECRET']
+  const missingEnv = requiredEnv.filter(name => !process.env[name])
+  if (process.env.NODE_ENV === 'production' && missingEnv.length) {
+    console.error(`Refusing to start, missing env vars: ${missingEnv.join(', ')}`)
+    process.exit(1)
+  }
+
+  syncDb()
+    .then(createApp)
+    .then(startListening)
+    .catch(err => {
+      console.error(err)
+      process.exit(1)
+    })
 } else {
   createApp()
 }

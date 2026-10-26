@@ -16,7 +16,7 @@ describe('User model', () => {
       beforeEach(() => {
         return User.create({
           email: 'cody@puppybook.com',
-          password: 'bones'
+          password: 'bonesbones'
         })
           .then(user => {
             cody = user
@@ -24,11 +24,21 @@ describe('User model', () => {
       })
 
       it('returns true if the password is correct', () => {
-        expect(cody.correctPassword('bones')).to.be.equal(true)
+        return cody.correctPassword('bonesbones')
+          .then(result => expect(result).to.be.equal(true))
       })
 
       it('returns false if the password is incorrect', () => {
-        expect(cody.correctPassword('bonez')).to.be.equal(false)
+        return cody.correctPassword('bonezbonez')
+          .then(result => expect(result).to.be.equal(false))
+      })
+
+      it('stores a bcrypt hash, not the password', () => {
+        expect(cody.password()).to.match(/^\$2[aby]\$1\d\$/)
+      })
+
+      it('leaves the password out of JSON', () => {
+        expect(JSON.stringify(cody)).to.not.include(cody.password())
       })
     }) // end describe('correctPassword')
   }) // end describe('instanceMethods')

@@ -1,12 +1,17 @@
-const crypto = require('crypto')
+const bcrypt = require('bcryptjs')
 const Sequelize = require('sequelize')
 const db = require('../db')
+
+const BCRYPT_COST = 10
 
 const User = db.define('user', {
   email: {
     type: Sequelize.STRING,
     unique: true,
-    allowNull: false
+    allowNull: false,
+    validate: {
+      isEmail: true
+    }
   },
   password: {
     type: Sequelize.STRING,
@@ -14,14 +19,6 @@ const User = db.define('user', {
     // This is a hack to get around Sequelize's lack of a "private" option.
     get() {
       return () => this.getDataValue('password')
-    }
-  },
-  salt: {
-    type: Sequelize.STRING,
-    // Making `.salt` act like a function hides it when serializing to JSON.
-    // This is a hack to get around Sequelize's lack of a "private" option.
-    get () {
-      return () => this.getDataValue('salt')
     }
   },
   googleId: {
@@ -34,34 +31,23 @@ module.exports = User
 /**
  * instanceMethods
  */
+// resolves to true/false; bcrypt hashes carry their own salt
 User.prototype.correctPassword = function (candidatePwd) {
-  return User.encryptPassword(candidatePwd, this.salt()) === this.password()
-}
-
-/**
- * classMethods
- */
-User.generateSalt = function () {
-  return crypto.randomBytes(16).toString('base64')
-}
-
-User.encryptPassword = function (plainText, salt) {
-  return crypto
-    .createHash('RSA-SHA256')
-    .update(plainText)
-    .update(salt)
-    .digest('hex')
+  if (!this.password()) return Promise.resolve(false)
+  return bcrypt.compare(candidatePwd, this.password())
 }
 
 /**
  * hooks
  */
-const setSaltAndPassword = user => {
-  if (user.changed('password')) {
-    user.salt = User.generateSalt()
-    user.password = User.encryptPassword(user.password(), user.salt())
+const hashPassword = user => {
+  if (user.changed('password') && user.password()) {
+    return bcrypt.hash(user.password(), BCRYPT_COST)
+      .then(hash => {
+        user.password = hash
+      })
   }
 }
 
-User.beforeCreate(setSaltAndPassword)
-User.beforeUpdate(setSaltAndPassword)
+User.beforeCreate(hashPassword)
+User.beforeUpdate(hashPassword)

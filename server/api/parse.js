@@ -1,42 +1,55 @@
 const router = require('express').Router()
 const axios = require('axios');
+const {parseLimiter} = require('../rateLimit')
+const {requireUser} = require('../auth/token')
 
 const getFromFoodAPI = axios.create({
-  baseURL: 'https://spoonacular-recipe-food-nutrition-v1.p.rapidapi.com/',
-  headers: {
-    'X-RapidAPI-Host': 'spoonacular-recipe-food-nutrition-v1.p.rapidapi.com',
-    'X-RapidAPI-Key': process.env.SPOONACULAR_API_KEY
-  }
+  baseURL: 'https://api.spoonacular.com/'
 })
 
+// axios `params` URL-encodes values, so recipe URLs keep their ? and & parts
+const callFoodAPI = (path, params) =>
+  getFromFoodAPI.get(path, {
+    params: Object.assign({}, params, {apiKey: process.env.SPOONACULAR_API_KEY})
+  })
+
+// log the upstream failure, but never send it on: it includes our request and key
+const sendFoodAPIError = (res, err, message) => {
+  const status = err.response && err.response.status
+  console.error(`Spoonacular error (${status || 'no response'}): ${err.message}`)
+  res.status(status === 402 || status === 429 ? 503 : 502).json({error: message})
+}
+
+router.use(parseLimiter)
+// every route here spends Spoonacular quota, so all of them need a login (PRD-001 R18)
+router.use(requireUser)
 
 router.get('/', (req, res, next) => {
   console.log('request query: ', req.query.url)
 
-  getFromFoodAPI.get(`recipes/extract?url=${req.query.url}`)
+  callFoodAPI('recipes/extract', {url: req.query.url})
   .then(response => response.data)
   .then(data => {
     res.status(200).send(data)
   })
-  .catch(err => {
-    res.status(500).send(err)
-  })
+  .catch(err => sendFoodAPIError(res, err, 'Could not parse recipe'))
 
 })
 
 router.get('/convert', (req, res, next) => {
-  console.log('request query: ', req.query.url)
+  const {ingredientName, sourceAmount, sourceUnit, targetUnit} = req.query
+  console.log('request query: ', req.query)
 
-  getFromFoodAPI.get(`recipes/convert?ingredientName=${req.query.ingredientName}&sourceAmount=${req.query.sourceAmount}&sourceUnit=${req.query.sourceUnit}&targetUnit=${req.query.targetUnit}`)
+  callFoodAPI('recipes/convert', {ingredientName, sourceAmount, sourceUnit, targetUnit})
   .then(response => response.data)
   .then(data => {
     res.status(200).send(data)
   })
-  .catch(err => {
-    res.status(500).send(err)
-  })
+  .catch(err => sendFoodAPIError(res, err, 'Could not convert ingredient'))
 
 })
 
 
 module.exports = router
+// exposed so specs can mock Spoonacular
+router.foodAPI = getFromFoodAPI

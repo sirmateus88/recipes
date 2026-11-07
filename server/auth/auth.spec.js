@@ -38,6 +38,22 @@ describe('Auth routes', () => {
         .then(user => expect(user.googleId).to.equal(null))
     })
 
+    it('trims and lowercases the email', () => {
+      return request(app)
+        .post('/auth/signup')
+        .send({email: '  Cody@PuppyBook.com ', password})
+        .expect(201)
+        .then(res => expect(res.body.user.email).to.equal(email))
+    })
+
+    it('returns 409 for the same email in a different case', () => {
+      return User.create({email, password})
+        .then(() => request(app)
+          .post('/auth/signup')
+          .send({email: 'CODY@puppybook.com', password})
+          .expect(409))
+    })
+
     it('rejects an invalid email', () => {
       return request(app)
         .post('/auth/signup')
@@ -74,6 +90,13 @@ describe('Auth routes', () => {
           expect(res.body.user.email).to.equal(email)
           expect(res.body.user).to.not.have.property('password')
         })
+    })
+
+    it('accepts the email in any case', () => {
+      return request(app)
+        .post('/auth/login')
+        .send({email: ' CODY@puppybook.com', password})
+        .expect(200)
     })
 
     it('gives the same 401 for a wrong password and an unknown email', () => {

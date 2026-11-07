@@ -6,6 +6,14 @@ module.exports = router
 
 const MIN_PASSWORD_LENGTH = 8
 
+// emails are matched case-insensitively, so store and look them up lowercased
+router.use((req, res, next) => {
+  if (req.body && typeof req.body.email === 'string') {
+    req.body.email = req.body.email.trim().toLowerCase()
+  }
+  next()
+})
+
 const sendAuth = (res, user, status) =>
   res.status(status || 200).json({token: signToken(user), user: publicProfile(user)})
 

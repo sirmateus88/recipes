@@ -23,7 +23,7 @@ if (process.env.NODE_ENV !== 'production') require('../secrets')
 // passport registration
 passport.serializeUser((user, done) => done(null, user.id))
 passport.deserializeUser((id, done) =>
-  db.models.user.findById(id)
+  db.models.user.findByPk(id)
     .then(user => done(null, user))
     .catch(done))
 
@@ -87,8 +87,6 @@ const startListening = () => {
   require('./socket')(io)
 }
 
-const syncDb = () => db.sync()
-
 // This evaluates as true when this file is run directly from the command line,
 // i.e. when we say 'node server/index.js' (or 'nodemon server/index.js', or 'nodemon server', etc)
 // It will evaluate false when this module is required by another module - for example,
@@ -101,7 +99,7 @@ if (require.main === module) {
     process.exit(1)
   }
 
-  syncDb()
+  require('./db/migrate')()
     .then(createApp)
     .then(startListening)
     .catch(err => {

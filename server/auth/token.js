@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken')
 const {User} = require('../db/models')
+const {isUuid} = require('../uuid')
 
 const TOKEN_LIFETIME = '30d'
 
@@ -20,7 +21,10 @@ const requireUser = (req, res, next) => {
     return res.status(401).send('Not logged in')
   }
 
-  User.findById(payload.id)
+  // A token from before ids became UUIDs is a signed-out cook, not a server error
+  if (!isUuid(payload.id)) return res.status(401).send('Not logged in')
+
+  User.findByPk(payload.id)
     .then(user => {
       if (!user) return res.status(401).send('Not logged in')
       req.user = user

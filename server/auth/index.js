@@ -31,7 +31,7 @@ router.post('/login', authLimiter, (req, res, next) => {
 })
 
 router.post('/signup', authLimiter, (req, res, next) => {
-  // only take email and password, so clients can't set e.g. googleId
+  // only take email and password, so clients can't set e.g. plan
   const {email, password} = req.body
   if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
     return res.status(400).send(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`)

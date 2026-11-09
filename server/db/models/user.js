@@ -5,8 +5,13 @@ const db = require('../db')
 const BCRYPT_COST = 10
 
 const User = db.define('user', {
+  id: {
+    type: Sequelize.UUID,
+    defaultValue: Sequelize.UUIDV4,
+    primaryKey: true
+  },
   email: {
-    type: Sequelize.STRING,
+    type: Sequelize.TEXT,
     unique: true,
     allowNull: false,
     validate: {
@@ -14,17 +19,29 @@ const User = db.define('user', {
     }
   },
   password: {
-    type: Sequelize.STRING,
+    type: Sequelize.TEXT,
+    field: 'password_hash',
+    allowNull: false,
     // Making `.password` act like a func hides it when serializing to JSON.
     // This is a hack to get around Sequelize's lack of a "private" option.
     get() {
       return () => this.getDataValue('password')
     }
   },
-  googleId: {
-    type: Sequelize.STRING
+  plan: {
+    type: Sequelize.TEXT,
+    allowNull: false,
+    defaultValue: 'free',
+    validate: {
+      isIn: [['free', 'subscribed']]
+    }
+  },
+  settings: {
+    type: Sequelize.JSONB,
+    allowNull: false,
+    defaultValue: {}
   }
-})
+}, {underscored: true})
 
 module.exports = User
 

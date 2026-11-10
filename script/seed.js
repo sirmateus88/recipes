@@ -1,89 +1,126 @@
-if (process.env.NODE_ENV !== "production") require("../secrets");
+if (process.env.NODE_ENV !== 'production') require('../secrets')
 
-const Sequelize = require("sequelize");
-const {
-  db,
-  Recipie,
-  User,
-} = require("../server/db/models/index");
+const crypto = require('crypto')
+const {db, User, Recipe, Save, Recent, CreditUse} = require('../server/db/models')
+const migrate = require('../server/db/migrate')
+const {firstOfThisMonth} = require('../server/api/recipeLists')
+const {seedImport} = require('./seed/parts')
 
-const recipies = [
-  {
-    name: "Pumpkin Bread",
-    ingredients: [
-      "1 15-ounce can (1 3/4 cups) pumpkin puree",
-      "1/2 cup (120 ml) vegetable or another neutral cooking oil or melted butter (115 grams)",
-      "3 large eggs",
-      "1 2/3 (330 grams) cups granulated sugar",
-      "1 1/2 teaspoons baking powder",
-      "3/4 teaspoon baking soda",
-      "3/4 teaspoon fine sea or table salt",
-      "3/4 teaspoon ground cinnamon",
-      "Heaped 1/4 teaspoon fresh grated nutmeg",
-      "Heaped 1/4 teaspoon ground ginger",
-      "Two pinches of ground cloves",
-      "2 1/4 cups (295 grams) all-purpose flour",
-      "1 tablespoon (12 grams) granulated sugar",
-      "1 teaspoon ground cinnamon"
-      ],
-    recipie: ["Heat oven to 350 degrees F. Butter a 6-cup loaf pan or coat it with nonstick spray",
-    "In a large bowl, whisk together pumpkin, oil, eggs and sugar until smooth."
-    , "Sprinkle baking powder, baking soda, salt, cinanmon, nutmeg, ginger and cloves over batter and whisk until well-combined.", "Add flour and stir with a spoon, just until mixed.", "Scrape into prepared pan and smooth the top.", "In a small dish, or empty measuring cup, stir sugar and cinnamon together. Sprinkle over top of batter.",
-    "Bake bread for 65 to 75 minutes until a tester poked into all parts of cake (both the top and center will want to hide pockets of uncooked batter) come out batter-free, turning the cake once during the baking time for even coloring.",
-    "You can cool it in the pan for 10 minutes and then remove it, or cool it completely in there. The latter provides the advantage of letting more of the loose cinnamon sugar on top adhere before being knocked off.",
-    "Cake keeps at room temperature as long as you can hide it. I like to keep mine in the tin with a piece of foil or plastic just over the cut end and the top exposed to best keep the lid crisp as long as possible."],
-    isPrivate: false
+// One file per seed account (PRD 10 S7). To add one, add a file and list it here.
+const accounts = {
+  new: require('./seed/new'),
+  light: require('./seed/light'),
+  heavy: require('./seed/heavy'),
+  'out-of-credits': require('./seed/out-of-credits')
+}
+
+const USAGE = `Usage:
+  npm run seed -- add <accounts>      create them, skipping any that exist
+  npm run seed -- reset <accounts>    put them back to their seeded state
+  npm run seed -- remove <accounts>   delete them and everything they own
+  npm run seed -- all                 reset every seed account
+Accounts: ${Object.keys(accounts).join(', ')}`
+
+// The reserved domain is how seed accounts are told apart. This is the only
+// place an email is built, so no other account can be matched.
+const emailFor = name => `${name}@seed.recipily.test`
+
+// resolves to the shared row for a link, as an import would leave it
+const sharedImport = idx => {
+  const fields = seedImport(idx)
+  return Recipe.findOrCreate({
+    where: {kind: 'import', sourceUrl: fields.sourceUrl},
+    defaults: Object.assign({lastImportedAt: new Date()}, fields)
+  }).then(([recipe]) => recipe)
+}
+
+// Rows get their times a minute apart, so lists have a stable order
+const minutesAgo = minutes => new Date(Date.now() - minutes * 60 * 1000)
+
+const inOrder = (items, step) => items.reduce(
+  (done, item) => done.then(results => step(item).then(result => results.concat([result]))),
+  Promise.resolve([])
+)
+
+const add = name => {
+  const spec = accounts[name]
+  const email = emailFor(name)
+  return User.findOne({where: {email}})
+    .then(found => {
+      if (found) {
+        console.log(`${email} exists, skipping`)
+        return null
+      }
+      return User.create({email, password: process.env.SEED_PASSWORD})
+        .then(user => Promise.all(spec.own.map(fields =>
+          Recipe.create(Object.assign({kind: 'own', ownerId: user.id}, fields))))
+          .then(own => Promise.all([
+            inOrder(spec.saveImports, sharedImport),
+            inOrder(spec.openImports, sharedImport)
+          ])
+            .then(([saved, opened]) => {
+              // own recipes are always saved, and they were opened after Save
+              const saveRows = own.concat(saved)
+              const recentRows = own.concat(opened)
+              return Promise.all([
+                Save.bulkCreate(saveRows.map((recipe, idx) => ({
+                  userId: user.id, recipeId: recipe.id, savedAt: minutesAgo(idx + 1)
+                }))),
+                Recent.bulkCreate(recentRows.map((recipe, idx) => ({
+                  userId: user.id, recipeId: recipe.id, lastOpenedAt: minutesAgo(idx + 1)
+                }))),
+                CreditUse.bulkCreate(Array.from({length: spec.creditsUsed}, () => ({
+                  userId: user.id,
+                  useId: crypto.randomUUID(),
+                  kind: 'import',
+                  source: 'paste',
+                  month: firstOfThisMonth()
+                })))
+              ])
+            })))
+        .then(() => console.log(`${email} added`))
+    })
+}
+
+// Cascades remove what it owns; shared import rows stay, as they do for anyone
+const remove = name =>
+  User.destroy({where: {email: emailFor(name)}})
+    .then(count => console.log(`${emailFor(name)} ${count ? 'removed' : 'not found'}`))
+
+const reset = name => remove(name).then(() => add(name))
+
+const actions = {add, reset, remove}
+
+// Returns a problem to report, or null if the command can run. Takes the env
+// so specs can check it without running anything.
+const problemWith = (action, names, env) => {
+  if (env.APP_ENV !== 'dev' && env.APP_ENV !== 'test') {
+    return 'Refusing to seed: APP_ENV must be dev or test'
   }
-];
-
-// One owner account from env vars; no test users with known passwords
-const owner = {
-  email: process.env.SEED_OWNER_EMAIL,
-  password: process.env.SEED_OWNER_PASSWORD
-};
-
-const seed = () =>
-  User.create(owner)
-    .then(createdOwner => Promise.all(recipies.map(recipie =>
-      Recipie.create(Object.assign({}, recipie, { AuthorId: createdOwner.id })))))
-
-// const addPerms = () =>
-//   User.findAll({
-//     where: {
-//       adminStatus: true
-//     }
-//   })
-//   .then(foundUsers => Promise.all(foundUsers.map(user => addPermsToUsers(user))));
-
-// const addPermsToUsers = (user) =>
-//   Permission.findAll()
-//   .then(foundPerms => Promise.all(foundPerms.map(perm => user.addPermission(perm))));
+  if (action === 'all' ? names.length : !actions[action] || !names.length) return USAGE
+  const unknown = names.filter(name => !accounts[name])
+  if (unknown.length) return `Unknown seed account: ${unknown.join(', ')}\n${USAGE}`
+  if (action !== 'remove' && !env.SEED_PASSWORD) return 'Set SEED_PASSWORD to seed'
+  return null
+}
 
 const main = () => {
-  if (!owner.email || !owner.password) {
-    console.log("Set SEED_OWNER_EMAIL and SEED_OWNER_PASSWORD to seed");
-    process.exit(1);
+  const [action, ...names] = process.argv.slice(2)
+  const problem = problemWith(action, names, process.env)
+  if (problem) {
+    console.error(problem)
+    process.exit(1)
   }
-  console.log("Syncing db...");
-  db
-    .sync({ force: true })
-    .then(() => {
-      console.log("Seeding database...");
-      return seed();
-    })
-    // .then(() => {
-    //   console.log("Setting Relationships...");
-    //   return addPerms();
-    // })
-    .then(() => console.log('Finished seeding database!'))
+  const run = action === 'all' ? reset : actions[action]
+  migrate()
+    .then(() => inOrder(action === 'all' ? Object.keys(accounts) : names, run))
+    .then(() => db.close())
     .catch(err => {
-      console.log("Error while seeding");
-      console.log(err.stack);
+      console.error(err)
+      process.exit(1)
     })
-    .then(() => {
-      db.close();
-      return null;
-    });
-};
+}
 
-main();
+module.exports = {problemWith, emailFor, add, remove, reset}
+
+if (require.main === module) main()

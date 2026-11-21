@@ -11,6 +11,7 @@
     "build-client-watch": "webpack -w",
     "deploy": "script/deploy",
     "lint": "eslint ./ --ignore-path .gitignore",
+    "migrate": "node server/db/migrate.js",
     "prepush": "npm run lint && npm test",
     "postinstall": "touch secrets.js",
     "seed": "node script/seed.js",
@@ -47,8 +48,9 @@
     "redux": "^3.6.0",
     "redux-logger": "^2.8.1",
     "redux-thunk": "^2.2.0",
-    "sequelize": "^4.3.1",
-    "socket.io": "^2.0.3"
+    "sequelize": "^6.37.8",
+    "socket.io": "^2.0.3",
+    "umzug": "^3.8.3"
   },
   "devDependencies": {
     "@babel/core": "^7.0.0-beta.40",

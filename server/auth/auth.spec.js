@@ -32,10 +32,10 @@ describe('Auth routes', () => {
     it('only accepts email and password from the body', () => {
       return request(app)
         .post('/auth/signup')
-        .send({email, password, googleId: 'sneaky'})
+        .send({email, password, plan: 'subscribed'})
         .expect(201)
         .then(() => User.findOne({where: {email}}))
-        .then(user => expect(user.googleId).to.equal(null))
+        .then(user => expect(user.plan).to.equal('free'))
     })
 
     it('trims and lowercases the email', () => {
